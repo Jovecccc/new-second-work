@@ -1,0 +1,66 @@
+var http = require("http");
+var querystring = require("querystring");
+var url = require("url");
+var fs = require("fs");
+var path = require("path");
+
+
+var server = http.createServer(function(req,res){
+     fs.readFile("index.html","utf8",function(err,data){
+     res.writeHead(200, {'content-type': 'text/html'});
+     res.end(data);
+     });
+     var pathname = url.parse(req.url).pathname;
+     console.log(pathname);
+      if(req.url == "/dopost" && req.method.toLowerCase() == "post"){
+        if(req.headers['content-type'].indexOf('multipart/form-data')!==-1)
+        parseFile(req, res) ;
+     }
+    
+  
+});
+server.listen(3000,"127.0.0.1");
+
+function parseFile (req, res) {
+    req.setEncoding('binary'); 
+    var body = '';   
+    var fileName = ''; 
+    var boundary = req.headers['content-type'].split('; ')[1].replace('boundary=','');
+    req.on('data', function(chunk){
+      body += chunk;
+      console.log(chunk.length);
+    });
+    req.on('end', function() {      
+      var file = querystring.parse(body, '\r\n', ':');
+      console.log(body.length);
+      if (file['Content-Type'].indexOf("image") !== -1)
+      {  
+        var fileInfo = file['Content-Disposition'].split('; ');
+        for (value in fileInfo){
+          if (fileInfo[value].indexOf("filename=") != -1){
+            fileName = fileInfo[value].substring(10, fileInfo[value].length-1); 
+  
+            if (fileName.indexOf('\\') != -1){
+              fileName = fileName.substring(fileName.lastIndexOf('\\')+1);
+            }
+            console.log("文件名: " + fileName); 
+            
+          }   
+        }
+  
+        var entireData = body.toString();      
+  
+        contentType = file['Content-Type'].substring(1); 
+        var upperBoundary = entireData.indexOf(contentType) + contentType.length; 
+        var shorterData = entireData.substring(upperBoundary); 
+        var binaryDataAlmost = shorterData.replace(/^\s\s*/, '').replace(/\s\s*$/, '');
+        var binaryData = binaryDataAlmost.substring(0, binaryDataAlmost.indexOf('--'+boundary+'--'));   
+        fs.writeFile(path.join(__dirname,`./upload/${fileName}`),binaryData,'binary',function(err){
+          res.writeHead(200,{'Content-Type':'text/html; charset=utf8'});
+          res.end('success');
+        });
+      } else {
+        res.end('只能上传图片文件'); 
+      }
+    }); 
+  }
