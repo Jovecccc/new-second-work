@@ -1,0 +1,28 @@
+var getJSON = function(url){
+    var promise = new promise(function(resolve,reject){
+        var xhr = new XMLHttpRequest();
+        xhr.open('GET',url);
+        xhr.onreadystatechange = judge;
+        xhr.responseType= 'json';
+        xhr.setRequestHeader('Accetp','application/json');
+        xhr.send();
+
+        function judge(){
+            if(this.readyState!==4){
+                return;
+            }
+            if(this.status===200){
+                resolve(this.response);
+            }else{
+                reject(new Error(this.statusText));
+            }
+        };
+    });
+    return promise;
+};
+
+getJSON("/posts.json").then(function(json){
+    console.log('Contents:'+json);
+},function(error){
+    console.error('error',error);
+});
